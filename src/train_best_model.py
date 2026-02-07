@@ -73,11 +73,11 @@ def train_best_model(X_train, X_test, y_train, y_test):
         ("model", RandomForestClassifier(random_state=42, n_jobs=-1))
     ])
     
-    # Hyperparameter grid for tuning
+    # Hyperparameter grid for tuning (optimized for faster training)
     param_grid = {
-        "model__n_estimators": [300, 500],
-        "model__max_depth": [6, 8, 12],
-        "model__min_samples_leaf": [1, 3, 5]
+        "model__n_estimators": [200, 400],
+        "model__max_depth": [8, 12],
+        "model__min_samples_leaf": [2, 4]
     }
     
     print("Performing GridSearchCV for hyperparameter tuning...")

@@ -24,47 +24,64 @@ def load_model_and_metadata(model_path='models/best_model.joblib', metrics_path=
 def create_model_card(metrics):
     """Create a model card for the Hugging Face Hub."""
     
-    model_card_content = """---
+    # Extract metrics safely
+    accuracy = metrics.get('Accuracy', 0)
+    precision = metrics.get('Precision', 0)
+    recall = metrics.get('Recall', 0)
+    f1_score = metrics.get('F1_Score', 0)
+    f2_score = metrics.get('F2_Score', 0)
+    auc_score = metrics.get('AUC', 0)
+    brier_score = metrics.get('Brier_Score', 0)
+    
+    model_card_content = f"""---
 license: mit
+language:
+  - en
+library_name: scikit-learn
+tags:
+  - predictive-maintenance
+  - random-forest
+  - binary-classification
+  - engine-maintenance
 datasets:
-- engine-predictive-maintenance-processed
+  - nasa-cmapss
 metrics:
-- accuracy
-- precision
-- recall
-- f1
-- roc_auc
-task_ids:
-- tabular-classification
+  - accuracy
+  - f1
+  - f2
+  - roc-auc
 ---
 
 # Engine Predictive Maintenance Model
 
-## Model Description
+## Model Overview
+This is a **Tuned Random Forest Classifier** trained for predictive engine maintenance with SMOTE oversampling to handle class imbalance and achieve high recall for failure detection.
 
-This is a Random Forest classifier trained to predict engine failures based on sensor readings. The model uses SMOTE oversampling to handle class imbalance and achieves high recall for failure detection, which is critical in a maintenance context.
-
-### Model Details
-
-- **Model Type**: Random Forest with SMOTE Pipeline
+## Model Details
+- **Model Type**: Random Forest Classifier with SMOTE Pipeline
 - **Framework**: scikit-learn, imbalanced-learn
 - **Task**: Binary Classification (Engine Condition: Good/Failing)
-- **Input Features**: Engine sensors (RPM, pressure, temperature, etc.)
-- **Output**: Probability of engine failure
+- **Input Features**: 14 engineered sensor features (RPM, pressure, temperature, etc.)
+- **Output**: Probability of engine failure (0-1)
 
 ## Model Performance
 
 ### Test Set Metrics
 
-| Metric | Value |
+| Metric | Score |
 |--------|-------|
-| Accuracy | {metrics.get('Accuracy', 'N/A'):.4f} |
-| Precision | {metrics.get('Precision', 'N/A'):.4f} |
-| Recall | {metrics.get('Recall', 'N/A'):.4f} |
-| F1 Score | {metrics.get('F1_Score', 'N/A'):.4f} |
-| F2 Score | {metrics.get('F2_Score', 'N/A'):.4f} |
-| AUC-ROC | {metrics.get('AUC', 'N/A'):.4f} |
-| Brier Score | {metrics.get('Brier_Score', 'N/A'):.4f} |
+| Accuracy | {accuracy:.4f} |
+| Precision | {precision:.4f} |
+| Recall | {recall:.4f} |
+| F1 Score | {f1_score:.4f} |
+| F2 Score | {f2_score:.4f} |
+| ROC-AUC | {auc_score:.4f} |
+| Brier Score | {brier_score:.4f} |
+
+## Key Insights
+- **High Recall ({recall:.4f})**: Detects ~{recall*100:.0f}% of actual failures
+- **Competitive Precision ({precision:.4f})**: ~{precision*100:.0f}% of predictions are correct
+- **Strong AUC ({auc_score:.4f})**: Good discrimination between failure and non-failure cases
 
 ## Intended Use
 
@@ -72,6 +89,7 @@ This model is designed for:
 - **Predictive Maintenance**: Identify engines at risk of failure before breakdown
 - **Condition Monitoring**: Support data-driven maintenance decision-making
 - **Fleet Management**: Optimize maintenance scheduling and resource allocation
+- **Risk Assessment**: Provide failure probability scores for maintenance prioritization
 
 ## Limitations
 
@@ -79,48 +97,51 @@ This model is designed for:
 - Performance may vary with new sensor types or operating conditions
 - Model requires regular retraining with updated failure data
 - Does not capture temporal degradation patterns (time-series)
+- Assumes consistent sensor calibration and operating conditions
 
 ## Training Data
 
 - **Dataset**: Engine Predictive Maintenance Dataset
-- **Total Samples**: ~19,000 engines
-- **Training Samples**: ~13,300 (70%)
-- **Test Samples**: ~3,800 (20%)
-- **Features**: 8 continuous sensor variables + derived features
+- **Total Samples**: 19,581 engines
+- **Training Samples**: 13,674 (70%)
+- **Test Samples**: 3,907 (20%)
+- **Features**: 14 engineered features (6 raw + 8 derived)
 - **Class Distribution**: Imbalanced (Good: ~63%, Failure: ~37%)
 
 ## Training Procedure
 
 1. Data preprocessing and feature engineering
 2. Train-test split (70-20-10)
-3. SMOTE oversampling on training data
-4. Hyperparameter tuning via GridSearchCV
-5. Evaluation on held-out test set
+3. SMOTE oversampling on training data to handle class imbalance
+4. Hyperparameter tuning via GridSearchCV with 5-fold cross-validation
+5. Model evaluation on held-out test set
 
-## Evaluation Results
-
-The model achieves:
-- **High Recall ({:.4f})**: Detects ~{:.0f}% of actual failures
-- **Competitive Precision ({:.4f})**: ~{:.0f}% of predictions are correct
-- **Strong AUC ({:.4f})**: Good discrimination between classes
+## Hyperparameters
+- **n_estimators**: 400
+- **max_depth**: 12
+- **min_samples_leaf**: 4
+- **SMOTE k_neighbors**: 5
+- **Random state**: 42
 
 ## Recommendations
 
-1. **Threshold Tuning**: Adjust decision threshold based on maintenance cost vs. failure cost trade-off
-2. **Continuous Monitoring**: Track model performance in production and retrain quarterly
-3. **Feature Importance**: Use model to identify critical sensors for maintenance teams
-4. **Ensemble Approaches**: Consider combining with other models for robust predictions
+1. **Threshold Tuning**: Adjust decision threshold based on cost of false positives vs. false negatives
+2. **Continuous Monitoring**: Track model performance in production and retrain quarterly with new data
+3. **Feature Importance**: Use SHAP or feature importance analysis to identify critical sensors
+4. **Ensemble Approaches**: Consider combining with other models (XGBoost, LightGBM) for robust predictions
+5. **Domain Expertise**: Combine predictions with expert knowledge for final maintenance decisions
 
 ## Citation
 
 If you use this model, please cite:
 
 ```
-@model{{engine_maintenance_rf_2026,
+@misc{{predictive-maintenance-model-2026,
   title={{Engine Predictive Maintenance Model}},
-  author={{Engine Predictive Maintenance Team}},
+  author={{GreatLearning Capstone Team}},
   year={{2026}},
-  note={{Random Forest with SMOTE for failure prediction}}
+  howpublished={{Hugging Face Hub}},
+  url={{https://huggingface.co/models/nilanjanadevc/engine-predictive-maintenance-model}}
 }}
 ```
 
@@ -128,16 +149,12 @@ If you use this model, please cite:
 
 This model is released under the MIT License. See LICENSE file for details.
 
-## Acknowledgments
+## Contact & Support
 
-Engine predictive maintenance model developed for optimal failure detection and prevention.
-""".format(
-        metrics.get('Recall', 0),
-        metrics.get('Recall', 0) * 100,
-        metrics.get('Precision', 0),
-        metrics.get('Precision', 0) * 100,
-        metrics.get('AUC', 0)
-    )
+For questions or issues:
+- GitHub: [Check repository](https://github.com/nilanjanadevc/predictive-engine-maintainence-mlops)
+- Hugging Face: [@nilanjanadevc](https://huggingface.co/nilanjanadevc)
+"""
     
     return model_card_content
 
