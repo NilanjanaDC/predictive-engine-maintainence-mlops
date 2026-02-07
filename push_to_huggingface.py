@@ -24,7 +24,7 @@ def load_model_and_metadata(model_path='models/best_model.joblib', metrics_path=
 def create_model_card(metrics):
     """Create a model card for the Hugging Face Hub."""
     
-    model_card_content = f"""---
+    model_card_content = """---
 license: mit
 datasets:
 - engine-predictive-maintenance-processed
@@ -58,13 +58,13 @@ This is a Random Forest classifier trained to predict engine failures based on s
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | {metrics.get('Accuracy', 'N/A'):.4f} |
-| Precision | {metrics.get('Precision', 'N/A'):.4f} |
-| Recall | {metrics.get('Recall', 'N/A'):.4f} |
-| F1 Score | {metrics.get('F1_Score', 'N/A'):.4f} |
-| F2 Score | {metrics.get('F2_Score', 'N/A'):.4f} |
-| AUC-ROC | {metrics.get('AUC', 'N/A'):.4f} |
-| Brier Score | {metrics.get('Brier_Score', 'N/A'):.4f} |
+| Accuracy | {:.4f} |
+| Precision | {:.4f} |
+| Recall | {:.4f} |
+| F1 Score | {:.4f} |
+| F2 Score | {:.4f} |
+| AUC-ROC | {:.4f} |
+| Brier Score | {:.4f} |
 
 ## Intended Use
 
@@ -132,6 +132,13 @@ This model is released under the MIT License. See LICENSE file for details.
 
 Engine predictive maintenance model developed for optimal failure detection and prevention.
 """.format(
+        metrics.get('Accuracy', 0),
+        metrics.get('Precision', 0),
+        metrics.get('Recall', 0),
+        metrics.get('F1_Score', 0),
+        metrics.get('F2_Score', 0),
+        metrics.get('AUC', 0),
+        metrics.get('Brier_Score', 0),
         metrics.get('Recall', 0),
         metrics.get('Recall', 0) * 100,
         metrics.get('Precision', 0),
