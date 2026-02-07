@@ -9,6 +9,16 @@ import pandas as pd
 from datetime import datetime
 
 
+def safe_format(value, decimals=4):
+    """Safely format a value as a float, returning 'N/A' if not numeric."""
+    try:
+        if value == 'N/A' or value is None:
+            return 'N/A'
+        return f"{float(value):.{decimals}f}"
+    except (ValueError, TypeError):
+        return 'N/A'
+
+
 def load_results():
     """Load all evaluation results."""
     metrics = {}
@@ -42,6 +52,15 @@ def load_results():
 def generate_report(metrics, classification_report, confusion_matrix, threshold_analysis):
     """Generate comprehensive markdown report."""
     
+    # Extract metrics safely
+    accuracy = safe_format(metrics.get('Accuracy', 'N/A'))
+    precision = safe_format(metrics.get('Precision', 'N/A'))
+    recall = safe_format(metrics.get('Recall', 'N/A'))
+    f1_score = safe_format(metrics.get('F1_Score', 'N/A'))
+    f2_score = safe_format(metrics.get('F2_Score', 'N/A'))
+    auc = safe_format(metrics.get('AUC', 'N/A'))
+    brier = safe_format(metrics.get('Brier_Score', 'N/A'))
+    
     report = f"""# Engine Predictive Maintenance Model Report
 
 **Generated**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -53,13 +72,13 @@ def generate_report(metrics, classification_report, confusion_matrix, threshold_
 This report documents the performance of the predictive maintenance model trained to detect engine failures based on sensor readings. The model uses a Random Forest classifier with SMOTE-based imbalance handling to achieve optimal recall for failure detection.
 
 ### Key Metrics at a Glance
-- **Accuracy**: {metrics.get('Accuracy', 'N/A'):.4f}
-- **Precision**: {metrics.get('Precision', 'N/A'):.4f}
-- **Recall**: {metrics.get('Recall', 'N/A'):.4f}
-- **F1 Score**: {metrics.get('F1_Score', 'N/A'):.4f}
-- **F2 Score**: {metrics.get('F2_Score', 'N/A'):.4f}
-- **AUC-ROC**: {metrics.get('AUC', 'N/A'):.4f}
-- **Brier Score**: {metrics.get('Brier_Score', 'N/A'):.4f}
+- **Accuracy**: {accuracy}
+- **Precision**: {precision}
+- **Recall**: {recall}
+- **F1 Score**: {f1_score}
+- **F2 Score**: {f2_score}
+- **AUC-ROC**: {auc}
+- **Brier Score**: {brier}
 
 ---
 
@@ -86,28 +105,28 @@ Random Forest was selected as the final model because it:
 
 | Metric | Value |
 |--------|-------|
-| Accuracy | {metrics.get('Accuracy', 'N/A'):.4f} |
-| Precision | {metrics.get('Precision', 'N/A'):.4f} |
-| Recall | {metrics.get('Recall', 'N/A'):.4f} |
-| F1 Score | {metrics.get('F1_Score', 'N/A'):.4f} |
-| F2 Score | {metrics.get('F2_Score', 'N/A'):.4f} |
-| AUC-ROC | {metrics.get('AUC', 'N/A'):.4f} |
-| PR-AUC | {metrics.get('PR_AUC', 'N/A'):.4f} |
-| Brier Score | {metrics.get('Brier_Score', 'N/A'):.4f} |
-| Specificity | {metrics.get('Specificity', 'N/A'):.4f} |
+| Accuracy | {accuracy} |
+| Precision | {precision} |
+| Recall | {recall} |
+| F1 Score | {f1_score} |
+| F2 Score | {f2_score} |
+| AUC-ROC | {auc} |
+| PR-AUC | {safe_format(metrics.get('PR_AUC', 'N/A'))} |
+| Brier Score | {brier} |
+| Specificity | {safe_format(metrics.get('Specificity', 'N/A'))} |
 
 ### Confusion Matrix
 
 | | Predicted Negative | Predicted Positive |
 |---|---|---|
-| **Actual Negative** | {metrics.get('True_Negatives', 0):.0f} | {metrics.get('False_Positives', 0):.0f} |
-| **Actual Positive** | {metrics.get('False_Negatives', 0):.0f} | {metrics.get('True_Positives', 0):.0f} |
+| **Actual Negative** | {int(metrics.get('True_Negatives', 0))} | {int(metrics.get('False_Positives', 0))} |
+| **Actual Positive** | {int(metrics.get('False_Negatives', 0))} | {int(metrics.get('True_Positives', 0))} |
 
 **Interpretation**:
-- **True Negatives**: {metrics.get('True_Negatives', 0):.0f} (Correctly identified good engines)
-- **False Positives**: {metrics.get('False_Positives', 0):.0f} (Good engines flagged as faulty - unnecessary maintenance)
-- **False Negatives**: {metrics.get('False_Negatives', 0):.0f} (Failed engines missed by model - HIGH RISK)
-- **True Positives**: {metrics.get('True_Positives', 0):.0f} (Correctly identified failing engines)
+- **True Negatives**: {int(metrics.get('True_Negatives', 0))} (Correctly identified good engines)
+- **False Positives**: {int(metrics.get('False_Positives', 0))} (Good engines flagged as faulty - unnecessary maintenance)
+- **False Negatives**: {int(metrics.get('False_Negatives', 0))} (Failed engines missed by model - HIGH RISK)
+- **True Positives**: {int(metrics.get('True_Positives', 0))} (Correctly identified failing engines)
 
 ---
 
@@ -117,7 +136,7 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
 
 """
     
-    if not threshold_analysis.empty:
+    if isinstance(threshold_analysis, pd.DataFrame) and not threshold_analysis.empty:
         report += threshold_analysis.to_markdown(index=False)
     else:
         report += "Threshold analysis data not available."
@@ -142,19 +161,23 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
         for class_label in ['0', '1']:
             if class_label in classification_report:
                 cls_data = classification_report[class_label]
-                report += f"| {class_label} | {cls_data.get('precision', 'N/A'):.4f} | {cls_data.get('recall', 'N/A'):.4f} | {cls_data.get('f1-score', 'N/A'):.4f} | {int(cls_data.get('support', 0))} |\n"
+                prec = safe_format(cls_data.get('precision', 'N/A'))
+                rec = safe_format(cls_data.get('recall', 'N/A'))
+                f1 = safe_format(cls_data.get('f1-score', 'N/A'))
+                support = int(cls_data.get('support', 0))
+                report += f"| {class_label} | {prec} | {rec} | {f1} | {support} |\n"
     
     report += """
 
 ### Safety Assessment
 
 **Failure Detection Rate (Recall)**: 
-- {:.4f} ({:.1f}% of actual failures detected)
-- This means approximately 1 in every {:.0f} engine failures may go undetected.
+- High recall is critical to avoid missed failures
+- Current recall: """ + recall + """
 
 **False Alarm Rate (1 - Precision)**:
-- {:.4f} ({:.1f}% of flagged engines are false positives)
-- This means approximately {:.1f}% of maintenance actions are unnecessary.
+- Lower is better for cost efficiency
+- Current precision: """ + precision + """
 
 ---
 
@@ -162,19 +185,19 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
 
 ### Risk Analysis
 
-1. **Missed Failures (False Negatives)**: {metrics.get('False_Negatives', 0):.0f}
+1. **Missed Failures (False Negatives)**: """ + str(int(metrics.get('False_Negatives', 0))) + """
    - Impact: Engine breakdowns, potential safety issues, high repair costs
    - Mitigation: Regular monitoring and maintenance intervals
 
-2. **False Alarms (False Positives)**: {metrics.get('False_Positives', 0):.0f}
+2. **False Alarms (False Positives)**: """ + str(int(metrics.get('False_Positives', 0))) + """
    - Impact: Unnecessary preventive maintenance, operational downtime
    - Mitigation: Use threshold tuning to reduce false positives
 
 ### ROI Metrics
 
-- **Sensitivity (True Positive Rate)**: {metrics.get('Recall', 'N/A'):.4f}
-- **Specificity (True Negative Rate)**: {metrics.get('Specificity', 'N/A'):.4f}
-- **Positive Predictive Value**: {metrics.get('Precision', 'N/A'):.4f}
+- **Sensitivity (True Positive Rate)**: """ + recall + """
+- **Specificity (True Negative Rate)**: """ + safe_format(metrics.get('Specificity', 'N/A')) + """
+- **Positive Predictive Value**: """ + precision + """
 
 ---
 
@@ -182,7 +205,7 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
 
 1. **Deploy with Caution**: The model shows competitive performance for predictive maintenance. Recommended for production with human-in-the-loop validation.
 
-2. **Threshold Tuning**: Consider lowering the decision threshold to {:.2f} to increase recall if failure prevention is critical.
+2. **Threshold Tuning**: Consider tuning the decision threshold based on your cost-benefit analysis of false positives vs false negatives.
 
 3. **Continuous Monitoring**: Track model performance in production and retrain quarterly with new failure data.
 
@@ -224,15 +247,7 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
 **Report Version**: 1.0  
 **Model Version**: best_model.joblib  
 **Status**: Production Ready (with monitoring)
-""".format(
-        metrics.get('Recall', 0),
-        metrics.get('Recall', 0) * 100,
-        1 / (1 - metrics.get('Recall', 0.5)) if metrics.get('Recall', 0) < 1 else float('inf'),
-        1 - metrics.get('Precision', 0),
-        (1 - metrics.get('Precision', 0)) * 100,
-        (1 - metrics.get('Precision', 0)) * 100,
-        0.5
-    )
+"""
     
     return report
 

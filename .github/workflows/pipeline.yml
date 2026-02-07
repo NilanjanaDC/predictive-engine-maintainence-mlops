@@ -98,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: engineered-features
-          path: data/features_engineered.csv
+          path: data/
 
   # ============================================
   # JOB 3: MODEL TRAINING
@@ -172,6 +172,10 @@ jobs:
           name: engineered-features
           path: data/
 
+      - name: Create reports directory
+        run: |
+          mkdir -p reports
+
       - name: Run evaluation
         run: |
           python src/evaluate_model.py
@@ -224,6 +228,12 @@ jobs:
         with:
           name: trained-model
           path: models/
+
+      - name: Download evaluation report
+        uses: actions/download-artifact@v4
+        with:
+          name: evaluation-report
+          path: reports/
 
       - name: Push model to HF Hub
         run: |
