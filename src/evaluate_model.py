@@ -1,200 +1,259 @@
-"""
-Model Evaluation Module
-Evaluates the trained model and generates comprehensive metrics and visualizations.
-"""
-
-import pandas as pd
-import numpy as np
 import os
 import json
 import joblib
-import warnings
-warnings.filterwarnings("ignore")
-
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    fbeta_score,
-    roc_auc_score,
-    brier_score_loss,
-    roc_curve,
-    confusion_matrix,
-    classification_report,
-    precision_recall_curve,
-    auc
-)
+from huggingface_hub import HfApi
 
 
-def load_data(data_dir='data'):
-    """Load test data."""
-    X_test = pd.read_csv(f'{data_dir}/X_test.csv')
-    y_test = pd.read_csv(f'{data_dir}/y_test.csv').values.ravel()
+def load_model_and_metadata(model_path='models/best_model.joblib', metrics_path='reports/metrics.json'):
+    """Load model and metrics."""
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model not found at {model_path}")
     
-    print(f"✓ Test data loaded: {X_test.shape}")
-    return X_test, y_test
-
-
-def load_model(model_path='models/best_model.joblib'):
-    """Load trained model."""
     model = joblib.load(model_path)
     print(f"✓ Model loaded from {model_path}")
-    return model
+    
+    metrics = {}
+    if os.path.exists(metrics_path):
+        with open(metrics_path, 'r') as f:
+            metrics = json.load(f)
+        print(f"✓ Metrics loaded from {metrics_path}")
+    
+    return model, metrics
 
 
-def evaluate_model_comprehensive(model, X_test, y_test):
-    """Comprehensive model evaluation with all metrics."""
-    # Predictions
-    preds = model.predict(X_test)
-    probs = model.predict_proba(X_test)[:, 1]
+def create_model_card(metrics):
+    """Create a model card for the Hugging Face Hub."""
     
-    # Calculate metrics
-    metrics = {
-        "Accuracy": accuracy_score(y_test, preds),
-        "Precision": precision_score(y_test, preds),
-        "Recall": recall_score(y_test, preds),
-        "F1_Score": f1_score(y_test, preds),
-        "F2_Score": fbeta_score(y_test, preds, beta=2),
-        "AUC": roc_auc_score(y_test, probs),
-        "Brier_Score": brier_score_loss(y_test, probs)
-    }
+    model_card_content = """---
+license: mit
+datasets:
+- engine-predictive-maintenance-processed
+metrics:
+- accuracy
+- precision
+- recall
+- f1
+- roc_auc
+task_ids:
+- tabular-classification
+---
+
+# Engine Predictive Maintenance Model
+
+## Model Description
+
+This is a Random Forest classifier trained to predict engine failures based on sensor readings. The model uses SMOTE oversampling to handle class imbalance and achieves high recall for failure detection, which is critical in a maintenance context.
+
+### Model Details
+
+- **Model Type**: Random Forest with SMOTE Pipeline
+- **Framework**: scikit-learn, imbalanced-learn
+- **Task**: Binary Classification (Engine Condition: Good/Failing)
+- **Input Features**: Engine sensors (RPM, pressure, temperature, etc.)
+- **Output**: Probability of engine failure
+
+## Model Performance
+
+### Test Set Metrics
+
+| Metric | Value |
+|--------|-------|
+| Accuracy | {:.4f} |
+| Precision | {:.4f} |
+| Recall | {:.4f} |
+| F1 Score | {:.4f} |
+| F2 Score | {:.4f} |
+| AUC-ROC | {:.4f} |
+| Brier Score | {:.4f} |
+
+## Intended Use
+
+This model is designed for:
+- **Predictive Maintenance**: Identify engines at risk of failure before breakdown
+- **Condition Monitoring**: Support data-driven maintenance decision-making
+- **Fleet Management**: Optimize maintenance scheduling and resource allocation
+
+## Limitations
+
+- Trained on historical engine data with specific sensor configurations
+- Performance may vary with new sensor types or operating conditions
+- Model requires regular retraining with updated failure data
+- Does not capture temporal degradation patterns (time-series)
+
+## Training Data
+
+- **Dataset**: Engine Predictive Maintenance Dataset
+- **Total Samples**: ~19,000 engines
+- **Training Samples**: ~13,300 (70%)
+- **Test Samples**: ~3,800 (20%)
+- **Features**: 8 continuous sensor variables + derived features
+- **Class Distribution**: Imbalanced (Good: ~63%, Failure: ~37%)
+
+## Training Procedure
+
+1. Data preprocessing and feature engineering
+2. Train-test split (70-20-10)
+3. SMOTE oversampling on training data
+4. Hyperparameter tuning via GridSearchCV
+5. Evaluation on held-out test set
+
+## Evaluation Results
+
+The model achieves:
+- **High Recall ({:.4f})**: Detects ~{:.0f}% of actual failures
+- **Competitive Precision ({:.4f})**: ~{:.0f}% of predictions are correct
+- **Strong AUC ({:.4f})**: Good discrimination between classes
+
+## Recommendations
+
+1. **Threshold Tuning**: Adjust decision threshold based on maintenance cost vs. failure cost trade-off
+2. **Continuous Monitoring**: Track model performance in production and retrain quarterly
+3. **Feature Importance**: Use model to identify critical sensors for maintenance teams
+4. **Ensemble Approaches**: Consider combining with other models for robust predictions
+
+## Citation
+
+If you use this model, please cite:
+
+```
+@model{{engine_maintenance_rf_2026,
+  title={{Engine Predictive Maintenance Model}},
+  author={{Engine Predictive Maintenance Team}},
+  year={{2026}},
+  note={{Random Forest with SMOTE for failure prediction}}
+}}
+```
+
+## License
+
+This model is released under the MIT License. See LICENSE file for details.
+
+## Acknowledgments
+
+Engine predictive maintenance model developed for optimal failure detection and prevention.
+""".format(
+        metrics.get('Accuracy', 0),
+        metrics.get('Precision', 0),
+        metrics.get('Recall', 0),
+        metrics.get('F1_Score', 0),
+        metrics.get('F2_Score', 0),
+        metrics.get('AUC', 0),
+        metrics.get('Brier_Score', 0),
+        metrics.get('Recall', 0),
+        metrics.get('Recall', 0) * 100,
+        metrics.get('Precision', 0),
+        metrics.get('Precision', 0) * 100,
+        metrics.get('AUC', 0)
+    )
     
-    # Confusion Matrix
-    cm = confusion_matrix(y_test, preds)
-    tn, fp, fn, tp = cm.ravel()
-    
-    # Derived metrics
-    metrics["True_Negatives"] = int(tn)
-    metrics["False_Positives"] = int(fp)
-    metrics["False_Negatives"] = int(fn)
-    metrics["True_Positives"] = int(tp)
-    metrics["Specificity"] = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
-    
-    # Classification Report
-    class_report = classification_report(y_test, preds, output_dict=True)
-    
-    # ROC Curve
-    fpr, tpr, roc_thresholds = roc_curve(y_test, probs)
-    
-    # Precision-Recall Curve
-    precision, recall, pr_thresholds = precision_recall_curve(y_test, probs)
-    pr_auc = auc(recall, precision)
-    metrics["PR_AUC"] = pr_auc
-    
-    return metrics, cm, class_report, fpr, tpr, roc_thresholds, precision, recall
+    return model_card_content
 
 
-def print_evaluation_report(metrics, cm, class_report):
-    """Print comprehensive evaluation report."""
-    print("\n" + "="*70)
-    print("MODEL EVALUATION REPORT")
-    print("="*70 + "\n")
+def push_to_huggingface(model, model_card_content, repo_id, private=False):
+    """Push model to Hugging Face Hub."""
     
-    print("PERFORMANCE METRICS:")
-    print("-" * 70)
-    for metric, value in metrics.items():
-        if metric not in ["True_Negatives", "False_Positives", "False_Negatives", "True_Positives"]:
-            print(f"{metric:25s}: {value:.4f}")
+    hf_token = os.environ.get('HF_TOKEN')
+    if not hf_token:
+        raise ValueError("HF_TOKEN environment variable not set")
     
-    print("\n" + "-" * 70)
-    print("CONFUSION MATRIX:")
-    print("-" * 70)
-    print(f"True Negatives:  {metrics['True_Negatives']:6d}")
-    print(f"False Positives: {metrics['False_Positives']:6d}")
-    print(f"False Negatives: {metrics['False_Negatives']:6d}")
-    print(f"True Positives:  {metrics['True_Positives']:6d}")
+    print(f"\n{'='*70}")
+    print("PUSHING MODEL TO HUGGING FACE HUB")
+    print(f"{'='*70}\n")
     
-    print("\n" + "-" * 70)
-    print("CLASSIFICATION REPORT:")
-    print("-" * 70)
-    print(json.dumps(class_report, indent=2))
+    print(f"Repository ID: {repo_id}")
+    print(f"Private: {private}")
     
-    print("\n" + "="*70 + "\n")
-
-
-def generate_threshold_analysis(probs, y_test):
-    """Analyze performance at different probability thresholds."""
-    thresholds_to_test = [0.3, 0.4, 0.5, 0.6, 0.7]
-    threshold_results = []
-    
-    for threshold in thresholds_to_test:
-        preds = (probs >= threshold).astype(int)
+    try:
+        # Initialize API
+        api = HfApi(token=hf_token)
         
-        result = {
-            "Threshold": threshold,
-            "Accuracy": accuracy_score(y_test, preds),
-            "Precision": precision_score(y_test, preds, zero_division=0),
-            "Recall": recall_score(y_test, preds, zero_division=0),
-            "F2_Score": fbeta_score(y_test, preds, beta=2, zero_division=0)
-        }
-        threshold_results.append(result)
-    
-    threshold_df = pd.DataFrame(threshold_results)
-    
-    print("\nTHRESHOLD ANALYSIS:")
-    print("-" * 70)
-    print(threshold_df.to_string(index=False))
-    print("-" * 70 + "\n")
-    
-    return threshold_df
-
-
-def save_evaluation_results(metrics, cm, class_report, threshold_df, output_dir='reports'):
-    """Save evaluation results."""
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Save metrics
-    metrics_to_save = {k: float(v) if isinstance(v, (int, np.integer, float, np.floating)) else v 
-                       for k, v in metrics.items()}
-    
-    with open(f'{output_dir}/metrics.json', 'w') as f:
-        json.dump(metrics_to_save, f, indent=2)
-    print(f"✓ Metrics saved to {output_dir}/metrics.json")
-    
-    # Save confusion matrix
-    cm_df = pd.DataFrame(cm, index=['Negative', 'Positive'], columns=['Predicted Negative', 'Predicted Positive'])
-    cm_df.to_csv(f'{output_dir}/confusion_matrix.csv')
-    print(f"✓ Confusion matrix saved to {output_dir}/confusion_matrix.csv")
-    
-    # Save classification report
-    with open(f'{output_dir}/classification_report.json', 'w') as f:
-        json.dump(class_report, f, indent=2)
-    print(f"✓ Classification report saved to {output_dir}/classification_report.json")
-    
-    # Save threshold analysis
-    threshold_df.to_csv(f'{output_dir}/threshold_analysis.csv', index=False)
-    print(f"✓ Threshold analysis saved to {output_dir}/threshold_analysis.csv")
+        # Create repository if it doesn't exist
+        print("\nCreating/accessing repository...")
+        repo_url = api.create_repo(
+            repo_id=repo_id,
+            repo_type="model",
+            private=private,
+            exist_ok=True
+        )
+        print(f"✓ Repository ready: {repo_url}")
+        
+        # Save model locally
+        local_model_path = "temp_model.joblib"
+        joblib.dump(model, local_model_path)
+        
+        # Upload model file
+        print("\nUploading model file...")
+        api.upload_file(
+            path_or_fileobj=local_model_path,
+            path_in_repo="model.joblib",
+            repo_id=repo_id,
+            repo_type="model",
+            commit_message="Upload trained Random Forest model"
+        )
+        print(f"✓ Model file uploaded")
+        
+        # Upload model card
+        print("Uploading model card...")
+        api.upload_file(
+            path_or_fileobj=model_card_content.encode('utf-8'),
+            path_in_repo="README.md",
+            repo_id=repo_id,
+            repo_type="model",
+            commit_message="Add model documentation"
+        )
+        print(f"✓ Model card uploaded")
+        
+        # Clean up temporary file
+        if os.path.exists(local_model_path):
+            os.remove(local_model_path)
+        
+        print(f"\n✓ Successfully pushed model to {repo_url}")
+        
+        return repo_url
+        
+    except Exception as e:
+        print(f"\n✗ Error pushing to Hugging Face: {str(e)}")
+        raise
 
 
 def main():
-    """Run model evaluation pipeline."""
+    """Main push to Hugging Face pipeline."""
     print("\n" + "="*70)
-    print("MODEL EVALUATION PIPELINE")
+    print("PUSHING MODEL TO HUGGING FACE HUB")
     print("="*70 + "\n")
     
-    # Load data and model
-    X_test, y_test = load_data()
-    model = load_model()
-    
-    # Comprehensive evaluation
-    metrics, cm, class_report, fpr, tpr, roc_thresholds, precision, recall = evaluate_model_comprehensive(
-        model, X_test, y_test
-    )
-    
-    # Print report
-    probs = model.predict_proba(X_test)[:, 1]
-    print_evaluation_report(metrics, cm, class_report)
-    
-    # Threshold analysis
-    threshold_df = generate_threshold_analysis(probs, y_test)
-    
-    # Save results
-    save_evaluation_results(metrics, cm, class_report, threshold_df)
-    
-    print("\n" + "="*70)
-    print("Model evaluation completed successfully!")
-    print("="*70 + "\n")
+    try:
+        # Load model and metrics
+        model, metrics = load_model_and_metadata()
+        
+        # Create model card
+        model_card_content = create_model_card(metrics)
+        
+        # Repository details
+        repo_id = os.environ.get('HF_REPO_ID', 'nilanjanadevc/engine-predictive-maintenance-model')
+        
+        # Push to Hugging Face
+        repo_url = push_to_huggingface(
+            model=model,
+            model_card_content=model_card_content,
+            repo_id=repo_id,
+            private=False
+        )
+        
+        print("\n" + "="*70)
+        print("MODEL SUCCESSFULLY DEPLOYED TO HUGGING FACE HUB")
+        print(f"Access your model at: {repo_url}")
+        print("="*70 + "\n")
+        
+    except FileNotFoundError as e:
+        print(f"\n✗ Error: {e}")
+        print("Please ensure the model has been trained and saved.")
+    except ValueError as e:
+        print(f"\n✗ Configuration Error: {e}")
+        print("Please set the HF_TOKEN environment variable before running this script.")
+    except Exception as e:
+        print(f"\n✗ Unexpected error: {e}")
+        raise
 
 
 if __name__ == "__main__":

@@ -285,6 +285,15 @@ jobs:
               commit_message='Update dependencies'
           )
           
+          # Upload README.md
+          api.upload_file(
+              path_or_fileobj='deployment/README.md',
+              path_in_repo='README.md',
+              repo_id='nilanjanadevc/EnginePredictionML',
+              repo_type='space',
+              commit_message='Update documentation'
+          )
+          
           print('✓ Files uploaded to Hugging Face Space')
           "
 
