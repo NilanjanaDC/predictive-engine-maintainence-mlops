@@ -40,41 +40,40 @@ def engineer_features(df):
     """Apply feature engineering to match training pipeline exactly"""
     df_enhanced = df.copy()
     
-    # Ensure we have the correct raw features in the correct order
-    # Raw features from input (keeping original names as they come from user input)
-    required_features = [
-        'Engine rpm',
-        'Lub oil pressure', 
-        'Fuel pressure',
-        'Coolant pressure',
-        'lub oil temp',
-        'Coolant temp'
-    ]
+    # STEP 1: Rename columns to match training convention
+    rename_mapping = {
+        "Lub oil pressure": "Lube Oil Pressure",
+        "lub oil temp": "Lube Oil Temperature",
+        "Coolant temp": "Coolant Temperature",
+        "Engine rpm": "Engine RPM",
+        "Fuel pressure": "Fuel Pressure",
+        "Coolant pressure": "Coolant Pressure"
+    }
     
-    # Verify all required features exist
-    for feature in required_features:
-        if feature not in df_enhanced.columns:
-            raise ValueError(f"Missing required feature: {feature}")
+    for old_name, new_name in rename_mapping.items():
+        if old_name in df_enhanced.columns:
+            df_enhanced.rename(columns={old_name: new_name}, inplace=True)
     
-    # Create engineered features (matching training pipeline)
-    df_enhanced['Lub_Stress_Index'] = df_enhanced['Lub oil pressure'] * df_enhanced['lub oil temp']
-    df_enhanced['Thermal_Efficiency'] = df_enhanced['Coolant pressure'] / (df_enhanced['Coolant temp'] + 1e-5)
-    df_enhanced['Power_Load_Index'] = df_enhanced['Engine rpm'] * df_enhanced['Fuel pressure']
+    # STEP 2: Get sensor columns (all columns except 'Engine Condition')
+    sensor_columns = [col for col in df_enhanced.columns if col != 'Engine Condition']
     
-    # Return features in the EXACT order the model was trained with
-    feature_order = [
-        'Engine rpm',
-        'Lub oil pressure',
-        'Fuel pressure',
-        'Coolant pressure',
-        'lub oil temp',
-        'Coolant temp',
-        'Lub_Stress_Index',
-        'Thermal_Efficiency',
-        'Power_Load_Index'
-    ]
+    # STEP 3: Add ratio features
+    if 'Lube Oil Pressure' in df_enhanced.columns and 'Coolant Pressure' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Pressure_Ratio'] = (
+            df_enhanced['Lube Oil Pressure'] / (df_enhanced['Coolant Pressure'] + 1)
+        )
     
-    return df_enhanced[feature_order]
+    if 'Lube Oil Temperature' in df_enhanced.columns and 'Coolant Temperature' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Temp_Diff'] = (
+            df_enhanced['Lube Oil Temperature'] - df_enhanced['Coolant Temperature']
+        )
+    
+    # STEP 4: Add squared features for EACH sensor column
+    for col in sensor_columns:
+        if col in df_enhanced.columns:
+            df_enhanced[f'{col}_Squared'] = df_enhanced[col] ** 2
+    
+    return df_enhanced
 
 # ============================================
 # MAIN APP
