@@ -36,7 +36,7 @@ def load_data(data_dir='data'):
     return X_test, y_test
 
 
-def load_model(model_path='models/best_model.pkl'):
+def load_model(model_path='models/best_model.joblib'):
     """Load trained model."""
     model = joblib.load(model_path)
     print(f"✓ Model loaded from {model_path}")

@@ -222,7 +222,7 @@ The model's decision threshold can be tuned to optimize the recall-precision tra
 ---
 
 **Report Version**: 1.0  
-**Model Version**: best_model.pkl  
+**Model Version**: best_model.joblib  
 **Status**: Production Ready (with monitoring)
 """.format(
         metrics.get('Recall', 0),
