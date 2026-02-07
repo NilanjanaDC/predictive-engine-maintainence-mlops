@@ -95,7 +95,7 @@ jobs:
           "
 
       - name: Upload processed data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: engineered-features
           path: data/features_engineered.csv
@@ -121,7 +121,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Download preprocessed data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: engineered-features
           path: data/
@@ -135,7 +135,7 @@ jobs:
           python src/train_best_model.py
 
       - name: Upload trained model
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: trained-model
           path: models/best_model.pkl
@@ -161,13 +161,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: Download model
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: trained-model
           path: models/
 
       - name: Download data
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: engineered-features
           path: data/
@@ -192,7 +192,7 @@ jobs:
           python src/generate_report.py
 
       - name: Upload evaluation report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: evaluation-report
           path: reports/
@@ -220,7 +220,7 @@ jobs:
           pip install huggingface-hub
 
       - name: Download model
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: trained-model
           path: models/
