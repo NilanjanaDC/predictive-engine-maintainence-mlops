@@ -127,7 +127,7 @@ def compute_roc_curve(model, X_test, y_test):
     return fpr, tpr, thresholds
 
 
-def save_model(model, model_path='models/best_model.pkl'):
+def save_model(model, model_path='models/best_model.joblib'):
     """Save the best model."""
     os.makedirs(os.path.dirname(model_path), exist_ok=True)
     joblib.dump(model, model_path)

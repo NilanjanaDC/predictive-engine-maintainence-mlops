@@ -139,6 +139,7 @@ models/
 reports/
 temp_model.pkl
 *.pkl
+*.joblib
 
 # Secrets and credentials
 .env.local

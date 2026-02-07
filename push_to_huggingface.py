@@ -10,7 +10,7 @@ from huggingface_hub import HfApi, ModelCard
 from pathlib import Path
 
 
-def load_model_and_metadata(model_path='models/best_model.pkl', metrics_path='reports/metrics.json'):
+def load_model_and_metadata(model_path='models/best_model.joblib', metrics_path='reports/metrics.json'):
     """Load model and metrics."""
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Model not found at {model_path}")
@@ -124,8 +124,8 @@ If you use this model, please cite:
 ```
 @model{{engine_maintenance_rf_2024,
   title={{Engine Predictive Maintenance Model}},
-  author={{GreatLearning MLOps Capstone}},
-  year={{2024}},
+  author={{Engine Predictive Maintenance Team}},
+  year={{2026}},
   note={{Random Forest with SMOTE for failure prediction}}
 }}
 ```
@@ -136,7 +136,7 @@ This model is released under the MIT License. See LICENSE file for details.
 
 ## Acknowledgments
 
-Trained as part of the GreatLearning MLOps Capstone project on predictive engine maintenance.
+Engine predictive maintenance model developed for optimal failure detection and prevention.
 """.format(
         metrics.get('Recall', 0),
         metrics.get('Recall', 0) * 100,
@@ -177,7 +177,7 @@ def push_to_huggingface(model, model_card_content, repo_id, private=False):
         print(f"✓ Repository ready: {repo_url}")
         
         # Save model locally
-        local_model_path = "temp_model.pkl"
+        local_model_path = "temp_model.joblib"
         joblib.dump(model, local_model_path)
         
         # Upload model file
