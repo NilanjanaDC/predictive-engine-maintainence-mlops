@@ -25,8 +25,8 @@ def load_model():
     """Load trained model from Hugging Face Hub"""
     try:
         model = hf_hub_download(
-            repo_id="YOUR_HF_USERNAME/predictive-maintenance-model",
-            filename="best_model.pkl"
+            repo_id="nilanjanadevc/engine-predictive-maintenance-model",
+            filename="model.joblib"
         )
         return joblib.load(model)
     except Exception as e:

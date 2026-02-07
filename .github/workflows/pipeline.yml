@@ -237,12 +237,69 @@ jobs:
           echo "✓ Space updated automatically"
 
   # ============================================
-  # JOB 6: UPDATE MAIN BRANCH
+  # JOB 6: BUILD AND DEPLOY API/UI
   # ============================================
+  api_deployment:
+    name: Deploy API to Hugging Face Spaces
+    runs-on: ubuntu-latest
+    needs: deployment
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install HF Hub
+        run: |
+          pip install huggingface-hub
+
+      - name: Deploy to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "
+          from huggingface_hub import HfApi
+          import os
+          
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          
+          # Upload app.py
+          api.upload_file(
+              path_or_fileobj='deployment/app.py',
+              path_in_repo='app.py',
+              repo_id='nilanjanadevc/EnginePredictionML',
+              repo_type='space',
+              commit_message='Update Streamlit app'
+          )
+          
+          # Upload requirements.txt
+          api.upload_file(
+              path_or_fileobj='deployment/requirements.txt',
+              path_in_repo='requirements.txt',
+              repo_id='nilanjanadevc/EnginePredictionML',
+              repo_type='space',
+              commit_message='Update dependencies'
+          )
+          
+          print('✓ Files uploaded to Hugging Face Space')
+          "
+
+      - name: Verify Space deployment
+        run: |
+          echo "✓ API deployment initiated"
+          echo "✓ Access the app at: https://huggingface.co/spaces/nilanjanadevc/EnginePredictionML"
+
+#   # ============================================
+#   # JOB 7: UPDATE MAIN BRANCH
+#   # ============================================
 #   finalize:
 #     name: Update Main Branch
 #     runs-on: ubuntu-latest
-#     needs: deployment
+#     needs: api_deployment
 #     if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && success()
 
 #     steps:
@@ -261,6 +318,8 @@ jobs:
 
 #             - Model training completed
 #             - Evaluation passed all thresholds
+#             - Model deployed to Hugging Face
+#             - API deployed to production
 #             - Ready for production deployment
 #           branch: model-update-${{ github.run_number }}
 #           base: main

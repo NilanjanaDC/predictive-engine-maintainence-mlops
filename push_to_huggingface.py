@@ -1,13 +1,7 @@
-"""
-Push Model to Hugging Face Hub
-Uploads the trained model to Hugging Face Model Hub for deployment.
-"""
-
 import os
 import json
 import joblib
-from huggingface_hub import HfApi, ModelCard
-from pathlib import Path
+from huggingface_hub import HfApi
 
 
 def load_model_and_metadata(model_path='models/best_model.joblib', metrics_path='reports/metrics.json'):
@@ -122,7 +116,7 @@ The model achieves:
 If you use this model, please cite:
 
 ```
-@model{{engine_maintenance_rf_2024,
+@model{{engine_maintenance_rf_2026,
   title={{Engine Predictive Maintenance Model}},
   author={{Engine Predictive Maintenance Team}},
   year={{2026}},
@@ -184,7 +178,7 @@ def push_to_huggingface(model, model_card_content, repo_id, private=False):
         print("\nUploading model file...")
         api.upload_file(
             path_or_fileobj=local_model_path,
-            path_in_repo="model.pkl",
+            path_in_repo="model.joblib",
             repo_id=repo_id,
             repo_type="model",
             commit_message="Upload trained Random Forest model"
@@ -229,8 +223,7 @@ def main():
         model_card_content = create_model_card(metrics)
         
         # Repository details
-        # This should be customized with actual HF username
-        repo_id = os.environ.get('HF_REPO_ID', 'engine-maintenance-predictor')
+        repo_id = os.environ.get('HF_REPO_ID', 'nilanjanadevc/engine-predictive-maintenance-model')
         
         # Push to Hugging Face
         repo_url = push_to_huggingface(
