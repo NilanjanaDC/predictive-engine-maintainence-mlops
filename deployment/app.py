@@ -37,18 +37,43 @@ def load_model():
 # FEATURE ENGINEERING FUNCTION
 # ============================================
 def engineer_features(df):
-    """Apply physics-based feature engineering"""
+    """Apply feature engineering to match training pipeline"""
     df_enhanced = df.copy()
-
-    # Lubrication Stress Index
-    df_enhanced['Lub_Stress_Index'] = df_enhanced['Lub oil pressure'] * df_enhanced['lub oil temp']
-
-    # Thermal Efficiency
-    df_enhanced['Thermal_Efficiency'] = df_enhanced['Coolant pressure'] / (df_enhanced['Coolant temp'] + 1e-5)
-
-    # Power Load Index
-    df_enhanced['Power_Load_Index'] = df_enhanced['Engine rpm'] * df_enhanced['Fuel pressure']
-
+    
+    # First, rename columns to match training data convention
+    rename_mapping = {
+        "Lub oil pressure": "Lube Oil Pressure",
+        "lub oil temp": "Lube Oil Temperature",
+        "Coolant temp": "Coolant Temperature",
+        "Engine rpm": "Engine RPM",
+        "Fuel pressure": "Fuel Pressure",
+        "Coolant pressure": "Coolant Pressure"
+    }
+    
+    for old_name, new_name in rename_mapping.items():
+        if old_name in df_enhanced.columns:
+            df_enhanced.rename(columns={old_name: new_name}, inplace=True)
+    
+    # Create sensor interactions (matching training pipeline)
+    sensor_columns = [col for col in df_enhanced.columns]
+    
+    # Add ratio features
+    if 'Lube Oil Pressure' in df_enhanced.columns and 'Coolant Pressure' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Pressure_Ratio'] = (
+            df_enhanced['Lube Oil Pressure'] / (df_enhanced['Coolant Pressure'] + 1)
+        )
+    
+    if 'Lube Oil Temperature' in df_enhanced.columns and 'Coolant Temperature' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Temp_Diff'] = (
+            df_enhanced['Lube Oil Temperature'] - df_enhanced['Coolant Temperature']
+        )
+    
+    # Add squared features for each sensor
+    for col in ['Lube Oil Pressure', 'Lube Oil Temperature', 'Coolant Pressure', 
+                'Coolant Temperature', 'Engine RPM', 'Fuel Pressure']:
+        if col in df_enhanced.columns:
+            df_enhanced[f'{col}_Squared'] = df_enhanced[col] ** 2
+    
     return df_enhanced
 
 # ============================================
