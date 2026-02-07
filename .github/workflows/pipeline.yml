@@ -187,15 +187,15 @@ jobs:
           print(f'✓ Model meets quality threshold (F2-Score: {f2_score})')
           "
 
-    #   - name: Generate report
-    #     run: |
-    #       python src/generate_report.py
+      - name: Generate report
+        run: |
+          python src/generate_report.py
 
-    #   - name: Upload evaluation report
-    #     uses: actions/upload-artifact@v4
-    #     with:
-    #       name: evaluation-report
-    #       path: reports/
+      - name: Upload evaluation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: reports/
 
   # ============================================
   # JOB 5: PUSH TO HUGGING FACE
