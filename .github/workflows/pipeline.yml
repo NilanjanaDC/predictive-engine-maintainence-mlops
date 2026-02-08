@@ -342,4 +342,3 @@ jobs:
             - Ready for production deployment
           branch: model-update-${{ github.run_number }}
           base: main
-          head: develop
