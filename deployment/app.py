@@ -25,8 +25,8 @@ def load_model():
     """Load trained model from Hugging Face Hub"""
     try:
         model = hf_hub_download(
-            repo_id="YOUR_HF_USERNAME/predictive-maintenance-model",
-            filename="best_model.pkl"
+            repo_id="nilanjanadevc/engine-predictive-maintenance-model",
+            filename="model.joblib"
         )
         return joblib.load(model)
     except Exception as e:
@@ -37,18 +37,42 @@ def load_model():
 # FEATURE ENGINEERING FUNCTION
 # ============================================
 def engineer_features(df):
-    """Apply physics-based feature engineering"""
+    """Apply feature engineering to match training pipeline exactly"""
     df_enhanced = df.copy()
-
-    # Lubrication Stress Index
-    df_enhanced['Lub_Stress_Index'] = df_enhanced['Lub oil pressure'] * df_enhanced['lub oil temp']
-
-    # Thermal Efficiency
-    df_enhanced['Thermal_Efficiency'] = df_enhanced['Coolant pressure'] / (df_enhanced['Coolant temp'] + 1e-5)
-
-    # Power Load Index
-    df_enhanced['Power_Load_Index'] = df_enhanced['Engine rpm'] * df_enhanced['Fuel pressure']
-
+    
+    # STEP 1: Rename columns to match training convention (CAPITALS)
+    rename_mapping = {
+        "Lub oil pressure": "Lube Oil Pressure",
+        "lub oil temp": "Lube Oil Temperature",
+        "Coolant temp": "Coolant Temperature",
+        "Engine rpm": "Engine RPM",
+        "Fuel pressure": "Fuel Pressure",
+        "Coolant pressure": "Coolant Pressure"
+    }
+    
+    for old_name, new_name in rename_mapping.items():
+        if old_name in df_enhanced.columns:
+            df_enhanced.rename(columns={old_name: new_name}, inplace=True)
+    
+    # STEP 2: Get sensor columns (all columns except 'Engine Condition')
+    sensor_columns = [col for col in df_enhanced.columns if col != 'Engine Condition']
+    
+    # STEP 3: Add ratio features
+    if 'Lube Oil Pressure' in df_enhanced.columns and 'Coolant Pressure' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Pressure_Ratio'] = (
+            df_enhanced['Lube Oil Pressure'] / (df_enhanced['Coolant Pressure'] + 1)
+        )
+    
+    if 'Lube Oil Temperature' in df_enhanced.columns and 'Coolant Temperature' in df_enhanced.columns:
+        df_enhanced['Oil_Coolant_Temp_Diff'] = (
+            df_enhanced['Lube Oil Temperature'] - df_enhanced['Coolant Temperature']
+        )
+    
+    # STEP 4: Add squared features for EACH sensor column
+    for col in sensor_columns:
+        if col in df_enhanced.columns:
+            df_enhanced[f'{col}_Squared'] = df_enhanced[col] ** 2
+    
     return df_enhanced
 
 # ============================================
