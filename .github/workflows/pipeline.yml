@@ -312,34 +312,34 @@ jobs:
           echo "✓ API deployment initiated"
           echo "✓ Access the app at: https://huggingface.co/spaces/nilanjanadevc/EnginePredictionML"
 
-#   # ============================================
-#   # JOB 7: UPDATE MAIN BRANCH
-#   # ============================================
-#   finalize:
-#     name: Update Main Branch
-#     runs-on: ubuntu-latest
-#     needs: api_deployment
-#     if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && success()
+  # ============================================
+  # JOB 7: UPDATE MAIN BRANCH
+  # ============================================
+  finalize:
+    name: Update Main Branch
+    runs-on: ubuntu-latest
+    needs: api_deployment
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && success()
 
-#     steps:
-#       - uses: actions/checkout@v3
-#         with:
-#           fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-#       - name: Create Pull Request to main
-#         uses: peter-evans/create-pull-request@v4
-#         with:
-#           token: ${{ secrets.GITHUB_TOKEN }}
-#           commit-message: 'Merge model updates from develop to main'
-#           title: 'Automated Model Update from develop'
-#           body: |
-#             Automated pull request for model updates.
+      - name: Create Pull Request to main
+        uses: peter-evans/create-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Merge model updates from develop to main'
+          title: 'Automated Model Update from develop'
+          body: |
+            Automated pull request for model updates.
 
-#             - Model training completed
-#             - Evaluation passed all thresholds
-#             - Model deployed to Hugging Face
-#             - API deployed to production
-#             - Ready for production deployment
-#           branch: model-update-${{ github.run_number }}
-#           base: main
-#           head: develop
+            - Model training completed
+            - Evaluation passed all thresholds
+            - Model deployed to Hugging Face
+            - API deployed to production
+            - Ready for production deployment
+          branch: model-update-${{ github.run_number }}
+          base: main
+          head: develop
